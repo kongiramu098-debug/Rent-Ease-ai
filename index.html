@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RentEase AI</title>
+<style>
+:root{--bg:#fff;--tx:#14162b;--mu:#6b6f8a;--ln:#e4e6f3;--cd:#f6f7fd;--b:#2f4bff;--p:#7c3aed;--ok:#0f9d58;--er:#d93025}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1120;--tx:#eef0ff;--mu:#9a9fc0;--ln:#2a2e4d;--cd:#181b33;--b:#6f84ff;--p:#a780ff}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 "Segoe UI",system-ui,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--ln)}
+.logo{font-weight:800;font-size:19px;background:linear-gradient(90deg,var(--b),var(--p));-webkit-background-clip:text;background-clip:text;color:transparent}
+nav{display:flex;gap:6px;flex-wrap:wrap}
+button{font:inherit;border-radius:10px;padding:8px 14px;cursor:pointer;background:var(--cd);color:var(--tx);border:1px solid var(--ln)}
+button.pr{background:linear-gradient(90deg,var(--b),var(--p));color:#fff;border:0}button:disabled{opacity:.5}
+main{max-width:980px;margin:0 auto;padding:16px}h1{font-size:26px;margin:8px 0}h2{font-size:19px;margin:18px 0 8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.card{background:var(--cd);border:1px solid var(--ln);border-radius:16px;padding:14px}.em{font-size:40px}.mu{color:var(--mu);font-size:13px}
+input,select{width:100%;padding:9px 10px;border-radius:10px;border:1px solid var(--ln);background:var(--bg);color:var(--tx);font:inherit;margin:4px 0 10px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row>*{flex:1}
+.tag{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;background:var(--b);color:#fff}.tag.g{background:var(--ok)}.tag.r{background:var(--er)}.tag.y{background:#b26a00}
+.wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:560px}th,td{text-align:left;padding:8px;border-bottom:1px solid var(--ln);font-size:14px}
+.tl{display:flex;gap:4px;margin:10px 0;overflow-x:auto}.st{flex:1;min-width:74px;text-align:center;font-size:11px;color:var(--mu)}
+.st i{display:block;height:8px;border-radius:4px;background:var(--ln);margin-bottom:4px}.st.on i{background:linear-gradient(90deg,var(--b),var(--p))}.st.on{color:var(--tx)}
+.modal{position:fixed;inset:0;background:#0009;display:flex;align-items:flex-end;justify-content:center;z-index:9}
+.modal>div{background:var(--bg);width:100%;max-width:440px;border-radius:20px 20px 0 0;padding:18px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:var(--tx);color:var(--bg);padding:10px 16px;border-radius:12px;z-index:10;display:none}
+.note{background:var(--cd);border-left:4px solid var(--p);padding:8px 12px;border-radius:8px;font-size:13px;color:var(--mu)}
+</style></head><body>
+<header><span class="logo">RentEase AI</span><nav id="nav"></nav></header>
+<main id="app"></main><div id="toast"></div>
+<script>
+const STEPS=["Booking Pending","Booking Confirmed","Payment Completed","Ready for Pickup","Rental Active","Return Requested","Returned","Completed"];
+const CATS=["Laptops","Smartphones","Cameras","Tablets","Projectors","Speakers","Gaming consoles","Accessories"];
+const BR=[["","All"],["Apple","Mac"],["Lenovo","Lenovo"],["Asus","Asus"],["Dell","Dell"],["HP","HP"]];
+const $=id=>document.getElementById(id),esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let me=null,view="home",flt={q:"",c:"",b:""},sel=null,allP=[],prods=[];
+async function api(p,m="GET",b){const r=await fetch("/api"+p,{method:m,headers:{"Content-Type":"application/json"},body:b?JSON.stringify(b):undefined});let j={};try{j=await r.json()}catch(e){}if(!r.ok)throw new Error(j.error||"Request failed");return j}
+function toast(m){const t=$("toast");t.textContent=m;t.style.display="block";setTimeout(()=>t.style.display="none",2800)}
+const guard=f=>async(...a)=>{try{await f(...a)}catch(e){toast(e.message)}};
+function go(v){view=v;render();scrollTo(0,0)}
+async function init(){try{me=await api("/me")}catch(e){}allP=await api("/products");await load();render()}
+async function load(){const q=new URLSearchParams({order:"asc"});if(flt.b)q.set("brand",flt.b);if(flt.c)q.set("category",flt.c);if(flt.q)q.set("q",flt.q);prods=await api("/products?"+q)}
+function nav(){const n=[["home","Browse"]];if(me)n.push(me.role=="admin"?["admin","Admin"]:["bookings","My rentals"]);
+$("nav").innerHTML=n.map(x=>`<button onclick="go('${x[0]}')">${x[1]}</button>`).join("")+(me?`<button onclick="logout()">Log out (${esc(me.name)})</button>`:`<button class="pr" onclick="go('login')">Log in</button>`)}
+const logout=guard(async()=>{await api("/logout","POST");me=null;go("home")});
+async function render(){nav();let h;try{h=await({home,login:()=>auth(0),register:()=>auth(1),detail,bookings,admin}[view]||home)()}catch(e){h=`<p style="color:var(--er)">${esc(e.message)}</p>`}$("app").innerHTML=h;if(view=="detail")quote()}
+function cards(){return prods.length?prods.map(p=>`<div class="card"><div class="em">💻</div><b>${esc(p.name)}</b><div class="mu">${esc(p.brand)} · ${p.year} · ${esc(p.cat)}</div><p>₹${p.price}/day <span class="mu">+ ₹${p.dep} deposit</span></p><button class="pr" onclick="sel='${p.id}';go('detail')">View & book</button></div>`).join(""):`<p class="mu">No devices match. Clear the search or pick another brand.</p>`}
+function head(){const l=(BR.find(x=>x[0]==flt.b)||[])[1];return flt.b?`<h2>${l} laptops, oldest to newest (${prods.length})</h2>`:""}
+async function home(){return `<h1>Rent electronics by the day</h1><p class="mu">Live data from MongoDB.</p>
+<div class="row" style="margin-bottom:8px">${BR.map(x=>`<button class="${flt.b==x[0]?"pr":""}" onclick="setB('${x[0]}')">${x[1]}</button>`).join("")}</div>
+<div class="row"><input placeholder="Search devices" value="${esc(flt.q)}" oninput="flt.q=this.value;refill()"><select onchange="flt.c=this.value;load().then(render)"><option value="">All categories</option>${CATS.map(c=>`<option ${flt.c==c?"selected":""}>${c}</option>`).join("")}</select></div>
+<div id="hd">${head()}</div><div class="grid" id="pg">${cards()}</div>`}
+const setB=guard(async b=>{flt.b=b;flt.c=b?"Laptops":"";await load();render()});
+const refill=guard(async()=>{await load();$("pg").innerHTML=cards();$("hd").innerHTML=head()});
+async function auth(reg){return `<h1>${reg?"Create account":"Log in"}</h1><div class="card" style="max-width:400px">${reg?`<label>Name<input id="n"></label>`:""}<label>Email<input id="e" type="email"></label><label>Password<input id="pw" type="password"></label>${reg?`<label>I am a<select id="r"><option value="customer">Customer</option><option value="owner">Shop owner</option></select></label>`:""}<button class="pr" onclick="${reg?"doReg()":"doLogin()"}">${reg?"Create account":"Log in"}</button> <button onclick="go('${reg?"login":"register"}')">${reg?"I have an account":"Create account"}</button></div>`}
+const doReg=guard(async()=>{await api("/register","POST",{name:$("n").value,email:$("e").value,password:$("pw").value,role:$("r").value});me=await api("/me");go("home")});
+const doLogin=guard(async()=>{await api("/login","POST",{email:$("e").value,password:$("pw").value});me=await api("/me");go(me.role=="admin"?"admin":"home")});
+async function detail(){const p=allP.find(x=>x.id==sel),t=new Date().toISOString().slice(0,10);
+return `<button onclick="go('home')">Back</button><div class="card" style="margin-top:10px"><div class="em">💻</div><h1>${esc(p.name)}</h1><p class="mu">${esc(p.brand)} · ${p.year} · ${p.qty} in stock</p><div class="row"><label>Start<input type="date" id="sd" min="${t}" value="${t}" onchange="quote()"></label><label>End<input type="date" id="ed" min="${t}" value="${t}" onchange="quote()"></label></div><div id="qt"></div></div>`}
+async function quote(){try{const j=await api(`/availability?product_id=${sel}&start=${$("sd").value}&end=${$("ed").value}`);$("qt").innerHTML=`<p>₹${j.rent/j.days}/day × ${j.days} day(s) = <b>₹${j.rent}</b><br>Refundable deposit: ₹${j.deposit}<br>Total due now: <b>₹${j.rent+j.deposit}</b></p>${j.available>0?`<span class="tag g">Available</span>`:`<span class="tag r">Unavailable for these dates</span>`}<p><button class="pr" ${j.available>0?"":"disabled"} onclick="book()">Confirm booking</button></p>`}catch(e){$("qt").innerHTML=`<p style="color:var(--er)">${esc(e.message)}</p>`}}
+const book=guard(async()=>{if(!me){go("login");throw new Error("Log in to book")}const b=await api("/bookings","POST",{product_id:sel,start:$("sd").value,end:$("ed").value});pay(b.id,b.rent+b.deposit)});
+function pay(id,amt){const m=document.createElement("div");m.className="modal";m.id="pm";m.innerHTML=`<div><h2>Pay ₹${amt}</h2><p class="note">Prototype checkout: no real money moves. The live version would use Razorpay with server-side signature verification.</p><label>Method<select id="pmth"><option>UPI</option><option>Card</option><option>Net banking</option></select></label><div class="row"><button onclick="$('pm').remove();go('bookings')">Pay later</button><button class="pr" onclick="doPay('${id}')">Pay ₹${amt}</button></div></div>`;document.body.appendChild(m)}
+const doPay=guard(async id=>{await api("/payments/create","POST",{booking_id:id,method:$("pmth").value});$("pm").remove();toast("Payment successful");go("bookings")});
+const tl=k=>k.status=="Cancelled"?`<span class="tag r">Cancelled</span>`:`<div class="tl">${STEPS.map((s,j)=>`<div class="st ${j<=STEPS.indexOf(k.status)?"on":""}"><i></i>${s}</div>`).join("")}</div>`;
+const pn=id=>(allP.find(p=>p.id==id)||{name:"Item"}).name;
+async function bookings(){if(!me)return auth(0);const bs=await api("/bookings");return `<h1>My rentals</h1>`+(bs.length?bs.map(k=>`<div class="card" style="margin-bottom:10px"><b>${esc(pn(k.product_id))}</b><div class="mu">${k.start} to ${k.end} · ${k.days} day(s) · ₹${k.rent+k.deposit} incl. ₹${k.deposit} deposit</div>${tl(k)}<div class="row">${!k.paid&&k.status!="Cancelled"?`<button class="pr" onclick="pay('${k.id}',${k.rent+k.deposit})">Pay now</button>`:""}${["Booking Pending","Booking Confirmed","Payment Completed"].includes(k.status)?`<button onclick="cancel('${k.id}')">Cancel</button>`:""}</div></div>`).join(""):`<p class="mu">No rentals yet. Browse devices to make your first booking.</p>`)}
+const cancel=guard(async id=>{await api(`/bookings/${id}/cancel`,"POST");render()});
+const nextStep=guard(async id=>{await api(`/bookings/${id}/status`,"PATCH");render()});
+const approve=guard(async id=>{await api(`/admin/users/${id}/approve`,"POST");render()});
+const delUser=guard(async id=>{await api(`/admin/users/${id}`,"DELETE");toast("User removed");render()});
+const addUser=guard(async()=>{await api("/admin/users","POST",{name:$("an").value,email:$("ae").value,password:$("ap").value,role:$("ar").value});toast("User added");render()});
+async function admin(){if(!me||me.role!="admin")return auth(0);const[bs,us,ps]=await Promise.all([api("/bookings"),api("/admin/users"),api("/admin/payments")]);const rev=ps.filter(p=>p.status=="Paid").reduce((s,p)=>s+p.amount,0);
+return `<h1>Admin dashboard</h1><div class="grid"><div class="card"><b>${us.length}</b><div class="mu">Users</div></div><div class="card"><b>${bs.length}</b><div class="mu">Bookings</div></div><div class="card"><b>₹${rev}</b><div class="mu">Payments received</div></div></div>
+<h2>Bookings</h2><div class="wrap"><table><tr><th>Item</th><th>Dates</th><th>Status</th><th></th></tr>${bs.map(k=>`<tr><td>${esc(pn(k.product_id))}</td><td>${k.start} → ${k.end}</td><td><span class="tag ${k.status=="Cancelled"?"r":k.paid?"g":"y"}">${k.status}</span></td><td>${STEPS.includes(k.status)&&k.status!="Completed"?`<button onclick="nextStep('${k.id}')">Next step</button>`:""}</td></tr>`).join("")||`<tr><td colspan=4 class="mu">No bookings yet.</td></tr>`}</table></div>
+<h2>Add user</h2><div class="card"><div class="row"><input id="an" placeholder="Name"><input id="ae" type="email" placeholder="Email"><input id="ap" type="password" placeholder="Password (6+ characters)"><select id="ar"><option value="customer">Customer</option><option value="owner">Shop owner</option><option value="admin">Admin</option></select></div><button class="pr" onclick="addUser()">Add user</button></div>
+<h2>Users</h2><div class="wrap"><table><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr>${us.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.email)}</td><td>${u.role}</td><td>${u.role=="owner"?(u.approved?`<span class="tag g">Approved</span> `:`<button onclick="approve('${u.id}')">Approve shop</button> `):""}${u.id!=me.id?`<button onclick="delUser('${u.id}')">Remove</button>`:""}</td></tr>`).join("")}</table></div>
+<h2>Payments</h2><div class="wrap"><table><tr><th>Txn</th><th>Amount</th><th>Method</th><th>Status</th></tr>${ps.map(p=>`<tr><td>${p.txn}</td><td>₹${p.amount}</td><td>${p.method}</td><td>${p.status}</td></tr>`).join("")||`<tr><td colspan=4 class="mu">No payments yet.</td></tr>`}</table></div>`}
+init();
+</script></body></html>

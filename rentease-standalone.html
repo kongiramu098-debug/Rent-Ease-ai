@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RentEase AI</title>
+<style>
+:root{--bg:#fff;--tx:#14162b;--mu:#6b6f8a;--ln:#e4e6f3;--cd:#f6f7fd;--b:#2f4bff;--p:#7c3aed;--ok:#0f9d58;--er:#d93025;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0f1120;--tx:#eef0ff;--mu:#9a9fc0;--ln:#2a2e4d;--cd:#181b33;--b:#6f84ff;--p:#a780ff}}
+:root[data-theme=dark]{--bg:#0f1120;--tx:#eef0ff;--mu:#9a9fc0;--ln:#2a2e4d;--cd:#181b33;--b:#6f84ff;--p:#a780ff}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 "Segoe UI",system-ui,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--ln)}
+.logo{font-weight:800;font-size:19px;background:linear-gradient(90deg,var(--b),var(--p));-webkit-background-clip:text;background-clip:text;color:transparent}
+nav{display:flex;gap:6px;flex-wrap:wrap}
+button,.btn{font:inherit;border:0;border-radius:10px;padding:8px 14px;cursor:pointer;background:var(--cd);color:var(--tx);border:1px solid var(--ln)}
+button.pr{background:linear-gradient(90deg,var(--b),var(--p));color:#fff;border:0}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--b);outline-offset:2px}
+main{max-width:980px;margin:0 auto;padding:16px}
+h1{font-size:26px;margin:8px 0}h2{font-size:19px;margin:18px 0 8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.card{background:var(--cd);border:1px solid var(--ln);border-radius:16px;padding:14px}
+.em{font-size:42px}.mu{color:var(--mu);font-size:13px}
+input,select{width:100%;padding:9px 10px;border-radius:10px;border:1px solid var(--ln);background:var(--bg);color:var(--tx);font:inherit;margin:4px 0 10px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row>*{flex:1}
+.tag{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;background:var(--b);color:#fff}
+.tag.g{background:var(--ok)}.tag.r{background:var(--er)}.tag.y{background:#b26a00}
+.wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:560px}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--ln);font-size:14px}
+.tl{display:flex;gap:4px;margin:10px 0;overflow-x:auto}.st{flex:1;min-width:74px;text-align:center;font-size:11px;color:var(--mu)}
+.st i{display:block;height:8px;border-radius:4px;background:var(--ln);margin-bottom:4px}.st.on i{background:linear-gradient(90deg,var(--b),var(--p))}.st.on{color:var(--tx)}
+.modal{position:fixed;inset:0;background:#0009;display:flex;align-items:flex-end;justify-content:center;z-index:9}
+.modal>div{background:var(--bg);width:100%;max-width:440px;border-radius:20px 20px 0 0;padding:18px;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--tx);color:var(--bg);padding:10px 16px;border-radius:12px;z-index:10;display:none}
+.note{background:var(--cd);border-left:4px solid var(--p);padding:8px 12px;border-radius:8px;font-size:13px;color:var(--mu)}
+</style></head><body>
+<header><span class="logo">RentEase AI</span><nav id="nav"></nav></header>
+<main id="app"></main><div id="toast"></div>
+<script>
+const STEPS=["Booking Pending","Booking Confirmed","Payment Completed","Ready for Pickup","Rental Active","Return Requested","Returned","Completed"];
+const CATS=["Laptops","Smartphones","Cameras","Tablets","Projectors","Speakers","Gaming consoles","Accessories"];
+const BASE=[["MacBook Air M2","Laptops","💻",450,5000,2,"Apple",2022],["Dell XPS 13","Laptops","💻",400,4000,3,"Dell",2023],["iPhone 14","Smartphones","📱",350,6000,2,"Apple",2022],["Canon EOS 200D","Cameras","📷",600,8000,1,"Canon",2018],["iPad Air","Tablets","📲",300,3000,2,"Apple",2022],["Epson Projector","Projectors","📽️",700,5000,1,"Epson",2021],["JBL PartyBox","Speakers","🔊",500,3000,2,"JBL",2021],["PlayStation 5","Gaming consoles","🎮",650,7000,1,"Sony",2020]];
+const LAP=[["Apple","MacBook Air M1",2020,380,4500,2],["Apple","MacBook Pro 14 M1 Pro",2021,650,9000,1],["Apple","MacBook Air M3",2024,550,6000,2],["Apple","MacBook Pro 14 M4",2024,900,10000,1],
+["Lenovo","ThinkPad T480",2018,220,2500,3],["Lenovo","IdeaPad Slim 3",2021,260,2500,3],["Lenovo","ThinkPad X1 Carbon Gen 10",2022,500,5000,2],["Lenovo","Legion 5 Pro",2023,600,6000,2],["Lenovo","Yoga Slim 7",2024,480,4500,2],
+["Asus","VivoBook 15",2020,230,2500,3],["Asus","ROG Zephyrus G14",2021,650,7000,1],["Asus","ZenBook 14 OLED",2022,420,4000,2],["Asus","TUF Gaming A15",2023,480,5000,2],["Asus","ROG Strix G16",2024,750,8000,1],
+["Dell","Inspiron 15 3000",2019,210,2500,3],["Dell","Latitude 7420",2021,380,4000,2],["Dell","XPS 15",2023,650,7000,1],["Dell","Alienware m16",2024,850,9000,1],
+["HP","Pavilion 15",2019,210,2500,3],["HP","EliteBook 840 G8",2021,360,4000,2],["HP","Spectre x360",2022,520,5500,2],["HP","Victus 16",2023,450,4500,2],["HP","OMEN 16",2024,700,7500,1]];
+const SEED_P=[...BASE.map(a=>({name:a[0],cat:a[1],em:a[2],price:a[3],dep:a[4],qty:a[5],brand:a[6],year:a[7]})),...LAP.map(a=>({name:a[1],cat:"Laptops",em:"💻",price:a[3],dep:a[4],qty:a[5],brand:a[0],year:a[2]}))].map((p,i)=>({id:i+1,shop:"Bengaluru Tech Rentals",...p}));
+const BR=[["","All"],["Apple","Mac"],["Lenovo","Lenovo"],["Asus","Asus"],["Dell","Dell"],["HP","HP"]];
+let mem=null;
+function load(){try{const d=localStorage.getItem("rentease");if(d)return JSON.parse(d)}catch(e){}return mem}
+function save(){try{localStorage.setItem("rentease",JSON.stringify(DB))}catch(e){}mem=DB}
+async function hash(s){try{const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}catch(e){return btoa(s)}}
+let DB=load(),me=null,view="home",flt={q:"",c:"",b:""},sel=null;
+async function init(){if(!DB){DB={users:[{id:1,name:"Admin",email:"admin@rentease.com",pw:await hash("admin123"),role:"admin"}],products:SEED_P,bookings:[],payments:[],notes:[],seq:1};save()}if((DB.v||0)<2){SEED_P.forEach(x=>{const o=DB.products.find(p=>p.id==x.id);if(o)Object.assign(o,{brand:x.brand,year:x.year});else DB.products.push(x)});DB.v=2;save()}try{const s=sessionStorage.getItem("re_me");if(s)me=DB.users.find(u=>u.id==s)}catch(e){}render()}
+const $=id=>document.getElementById(id),esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function toast(m){const t=$("toast");t.textContent=m;t.style.display="block";setTimeout(()=>t.style.display="none",2600)}
+function go(v){view=v;render();scrollTo(0,0)}
+function notify(uid,msg){DB.notes.push({uid,msg,at:new Date().toLocaleString()})}
+function days(a,b){return Math.round((new Date(b)-new Date(a))/864e5)+1}
+function free(pid,a,b,ignore){const p=DB.products.find(x=>x.id==pid);const used=DB.bookings.filter(k=>k.pid==pid&&k.id!=ignore&&k.status!="Cancelled"&&k.status!="Completed"&&k.status!="Returned"&&!(k.end<a||k.start>b)).length;return p.qty-used}
+function nav(){const n=[["home","Browse"]];if(me){if(me.role=="admin")n.push(["admin","Admin"]);else n.push(["bookings","My rentals"]);n.push(["notes","Alerts ("+DB.notes.filter(x=>x.uid==me.id).length+")"])}
+$("nav").innerHTML=n.map(x=>`<button onclick="go('${x[0]}')">${x[1]}</button>`).join("")+(me?`<button onclick="logout()">Log out</button>`:`<button class="pr" onclick="go('login')">Log in</button>`)+`<button aria-label="Toggle theme" onclick="theme()">◐</button>`}
+function theme(){const r=document.documentElement;const d=getComputedStyle(r).getPropertyValue("--bg").trim()!="#fff";r.dataset.theme=d?"light":"dark"}
+function logout(){me=null;try{sessionStorage.removeItem("re_me")}catch(e){}go("home")}
+function render(){nav();const v={home,login,register,detail,bookings,admin,notes:notesV}[view]||home;$("app").innerHTML=v();if(view=="detail")quote()}
+const fl=()=>{const r=DB.products.filter(p=>(!flt.c||p.cat==flt.c)&&(!flt.b||p.brand==flt.b)&&(p.name+" "+p.brand).toLowerCase().includes(flt.q.toLowerCase()));if(flt.b)r.sort((a,b)=>a.year-b.year);return r};
+function setB(b){flt.b=b;flt.c=b?"Laptops":"";render()}
+function head(){const l=(BR.find(x=>x[0]==flt.b)||[])[1];return flt.b?`<h2>${l} laptops, oldest to newest (${fl().length})</h2>`:""}
+function home(){
+return `<h1>Rent electronics by the day</h1><p class="mu">Laptops, cameras, consoles and more from verified local shops.</p>
+<div class="row" style="margin-bottom:8px">${BR.map(x=>`<button class="${flt.b==x[0]?"pr":""}" onclick="setB('${x[0]}')">${x[1]}</button>`).join("")}</div>
+<div class="row"><input id="q" placeholder="Search devices" value="${esc(flt.q)}" oninput="flt.q=this.value;refill()"><select onchange="flt.c=this.value;render()"><option value="">All categories</option>${CATS.map(c=>`<option ${flt.c==c?"selected":""}>${c}</option>`).join("")}</select></div>
+<div id="hd">${head()}</div><div class="grid" id="pg">${cards(fl())}</div>`}
+function cards(ps){return ps.length?ps.map(p=>`<div class="card"><div class="em">${p.em}</div><b>${esc(p.name)}</b><div class="mu">${p.brand} · ${p.year} · ${p.cat}</div><p>₹${p.price}/day <span class="mu">+ ₹${p.dep} deposit</span></p><button class="pr" onclick="sel=${p.id};go('detail')">View & book</button></div>`).join(""):`<p class="mu">No devices match. Clear the search or pick another brand.</p>`}
+function refill(){$("pg").innerHTML=cards(fl());$("hd").innerHTML=head()}
+function authForm(reg){return `<h1>${reg?"Create account":"Log in"}</h1><div class="card" style="max-width:400px">${reg?`<label>Name<input id="n"></label>`:""}<label>Email<input id="e" type="email"></label><label>Password<input id="pw" type="password"></label>${reg?`<label>I am a<select id="r"><option value="customer">Customer</option><option value="owner">Shop owner (needs admin approval)</option></select></label>`:""}<button class="pr" onclick="${reg?"doReg()":"doLogin()"}">${reg?"Create account":"Log in"}</button> <button onclick="go('${reg?"login":"register"}')">${reg?"I have an account":"Create account"}</button></div>${reg?"":`<p class="note" style="max-width:400px">Demo admin: admin@rentease.com / admin123</p>`}`}
+const login=()=>authForm(0),register=()=>authForm(1);
+async function doReg(){const n=$("n").value.trim(),e=$("e").value.trim().toLowerCase(),p=$("pw").value;if(!n||!/^\S+@\S+\.\S+$/.test(e)||p.length<6)return toast("Enter a name, valid email and a 6+ character password");if(DB.users.some(u=>u.email==e))return toast("That email is already registered");
+const u={id:++DB.seq+1,name:n,email:e,pw:await hash(p),role:$("r").value};DB.users.push(u);save();me=u;try{sessionStorage.setItem("re_me",u.id)}catch(x){}toast("Welcome, "+n);go("home")}
+async function doLogin(){const e=$("e").value.trim().toLowerCase(),h=await hash($("pw").value);const u=DB.users.find(x=>x.email==e&&x.pw==h);if(!u)return toast("Email or password is incorrect");me=u;try{sessionStorage.setItem("re_me",u.id)}catch(x){}go(u.role=="admin"?"admin":"home")}
+function detail(){const p=DB.products.find(x=>x.id==sel);const t=new Date().toISOString().slice(0,10);
+return `<button onclick="go('home')">Back</button><div class="card" style="margin-top:10px"><div class="em">${p.em}</div><h1>${esc(p.name)}</h1><p class="mu">${p.cat} · ${esc(p.shop)} · ${p.qty} in stock</p>
+<div class="row"><label>Start<input type="date" id="sd" min="${t}" value="${t}" onchange="quote()"></label><label>End<input type="date" id="ed" min="${t}" value="${t}" onchange="quote()"></label></div><div id="qt"></div></div>`}
+function quote(){const p=DB.products.find(x=>x.id==sel),a=$("sd").value,b=$("ed").value;if(!a||b<a){$("qt").innerHTML=`<p style="color:var(--er)">End date must be on or after the start date.</p>`;return}
+const d=days(a,b),f=free(p.id,a,b);$("qt").innerHTML=`<p>Rental: ₹${p.price} × ${d} day(s) = <b>₹${p.price*d}</b><br>Refundable deposit: ₹${p.dep}<br>Total due now: <b>₹${p.price*d+p.dep}</b></p>${f>0?`<span class="tag g">Available</span> `:`<span class="tag r">Unavailable for these dates</span>`}<p><button class="pr" ${f>0?"":"disabled"} onclick="book(${p.id})">Confirm booking</button></p>`}
+function book(pid){if(!me){toast("Log in to book");return go("login")}if(me.role=="admin")return toast("Use a customer account to book");
+const a=$("sd").value,b=$("ed").value,p=DB.products.find(x=>x.id==pid);if(b<a||free(pid,a,b)<1)return toast("Those dates are no longer available");
+const k={id:"RE"+String(1000+DB.bookings.length+1),uid:me.id,pid,start:a,end:b,days:days(a,b),rent:p.price*days(a,b),dep:p.dep,status:"Booking Pending",paid:false,log:[["Booking Pending",new Date().toLocaleString()]]};
+DB.bookings.push(k);notify(me.id,`Booking ${k.id} created for ${p.name}. Complete payment to confirm.`);save();pay(k.id)}
+function pay(id){const k=DB.bookings.find(x=>x.id==id),amt=k.rent+k.dep;const m=document.createElement("div");m.className="modal";m.id="pm";
+m.innerHTML=`<div><h2>Pay ₹${amt}</h2><p class="note">Prototype checkout: no real money moves and no card data is stored. The live version would use Razorpay Checkout with server-side signature verification.</p><label>Method<select id="pmth"><option>UPI</option><option>Card</option><option>Net banking</option></select></label><div class="row"><button onclick="$('pm').remove();go('bookings')">Pay later</button><button class="pr" onclick="doPay('${id}')">Pay ₹${amt}</button></div></div>`;document.body.appendChild(m)}
+function adv(k,s){k.status=s;k.log.push([s,new Date().toLocaleString()])}
+function doPay(id){const k=DB.bookings.find(x=>x.id==id);if(k.paid){$("pm").remove();return}
+DB.payments.push({id:"pay_"+Math.random().toString(36).slice(2,10),bid:id,uid:k.uid,amt:k.rent+k.dep,method:$("pmth").value,status:"Paid",at:new Date().toLocaleString()});
+k.paid=true;adv(k,"Booking Confirmed");adv(k,"Payment Completed");notify(k.uid,`Payment received for ${id}. Booking confirmed.`);save();$("pm").remove();toast("Payment successful");go("bookings")}
+function tl(k){const i=STEPS.indexOf(k.status);return k.status=="Cancelled"?`<span class="tag r">Cancelled</span>`:`<div class="tl">${STEPS.map((s,j)=>`<div class="st ${j<=i?"on":""}"><i></i>${s}</div>`).join("")}</div>`}
+function bookings(){if(!me)return login();const bs=DB.bookings.filter(k=>k.uid==me.id).reverse();
+return `<h1>My rentals</h1>`+(bs.length?bs.map(k=>{const p=DB.products.find(x=>x.id==k.pid);return `<div class="card" style="margin-bottom:10px"><b>${k.id} · ${p.em} ${esc(p.name)}</b><div class="mu">${k.start} to ${k.end} · ${k.days} day(s) · ₹${k.rent+k.dep} incl. ₹${k.dep} deposit</div>${tl(k)}<div class="row">${!k.paid&&k.status!="Cancelled"?`<button class="pr" onclick="pay('${k.id}')">Pay now</button>`:""}${["Rental Active"].includes(k.status)?`<button onclick="reqRet('${k.id}')">Request return</button>`:""}${["Booking Pending","Booking Confirmed","Payment Completed"].includes(k.status)?`<button onclick="cancel('${k.id}')">Cancel</button>`:""}</div></div>`}).join(""):`<p class="mu">No rentals yet. Browse devices to make your first booking.</p>`)}
+function cancel(id){const k=DB.bookings.find(x=>x.id==id);adv(k,"Cancelled");if(k.paid){const pm=DB.payments.find(x=>x.bid==id);if(pm)pm.status="Refund due"}notify(k.uid,`Booking ${id} cancelled.`);save();render()}
+function reqRet(id){adv(DB.bookings.find(x=>x.id==id),"Return Requested");save();render()}
+function nextStep(id){const k=DB.bookings.find(x=>x.id==id),i=STEPS.indexOf(k.status);if(i<0||i>=STEPS.length-1)return;if(!k.paid&&i>=1)return toast("Payment is pending");adv(k,STEPS[i+1]);notify(k.uid,`${id} is now: ${k.status}`);save();render()}
+async function addUser(){const n=$("an").value.trim(),e=$("ae").value.trim().toLowerCase(),p=$("ap").value,r=$("ar").value;if(!n||!/^\S+@\S+\.\S+$/.test(e)||p.length<6)return toast("Enter a name, valid email and a 6+ character password");if(DB.users.some(u=>u.email==e))return toast("That email is already registered");
+DB.users.push({id:++DB.seq+1,name:n,email:e,pw:await hash(p),role:r,approved:r=="owner"});save();toast(n+" added as "+r);render()}
+function delUser(id){if(DB.bookings.some(k=>k.uid==id&&k.status!="Cancelled"&&k.status!="Completed"))return toast("This user has active bookings. Cancel them first.");DB.users=DB.users.filter(u=>u.id!=id);save();toast("User removed");render()}
+function approve(id){DB.users.find(u=>u.id==id).approved=true;save();render()}
+function admin(){if(!me||me.role!="admin")return login();const rev=DB.payments.filter(p=>p.status=="Paid").reduce((s,p)=>s+p.amt,0);
+return `<h1>Admin dashboard</h1><div class="grid"><div class="card"><b>${DB.users.length}</b><div class="mu">Users</div></div><div class="card"><b>${DB.bookings.length}</b><div class="mu">Bookings</div></div><div class="card"><b>₹${rev}</b><div class="mu">Payments received</div></div></div>
+<h2>Bookings</h2><div class="wrap"><table><tr><th>ID</th><th>Item</th><th>Dates</th><th>Status</th><th></th></tr>${DB.bookings.map(k=>`<tr><td>${k.id}</td><td>${esc(DB.products.find(p=>p.id==k.pid).name)}</td><td>${k.start} → ${k.end}</td><td><span class="tag ${k.status=="Cancelled"?"r":k.paid?"g":"y"}">${k.status}</span></td><td>${k.status!="Cancelled"&&k.status!="Completed"?`<button onclick="nextStep('${k.id}')">Next step</button>`:""}</td></tr>`).join("")||`<tr><td colspan=5 class="mu">No bookings yet.</td></tr>`}</table></div>
+<h2>Add user</h2><div class="card"><div class="row"><input id="an" placeholder="Name"><input id="ae" type="email" placeholder="Email"><input id="ap" type="password" placeholder="Password (6+ characters)"><select id="ar"><option value="customer">Customer</option><option value="owner">Shop owner</option><option value="admin">Admin</option></select></div><button class="pr" onclick="addUser()">Add user</button></div>
+<h2>Users</h2><div class="wrap"><table><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr>${DB.users.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.email)}</td><td>${u.role}</td><td>${u.role=="owner"?(u.approved?`<span class="tag g">Approved</span> `:`<button onclick="approve(${u.id})">Approve shop</button> `):""}${u.id!=1&&u.id!=me.id?`<button onclick="delUser(${u.id})">Remove</button>`:""}</td></tr>`).join("")}</table></div>
+<h2>Payments</h2><div class="wrap"><table><tr><th>Txn</th><th>Booking</th><th>Amount</th><th>Method</th><th>Status</th></tr>${DB.payments.map(p=>`<tr><td>${p.id}</td><td>${p.bid}</td><td>₹${p.amt}</td><td>${p.method}</td><td>${p.status}</td></tr>`).join("")||`<tr><td colspan=5 class="mu">No payments yet.</td></tr>`}</table></div>`}
+function notesV(){if(!me)return login();const n=DB.notes.filter(x=>x.uid==me.id).reverse();return `<h1>Alerts</h1>`+(n.length?n.map(x=>`<div class="card" style="margin-bottom:8px">${esc(x.msg)}<div class="mu">${x.at}</div></div>`).join(""):`<p class="mu">Nothing yet. Booking and payment updates will appear here.</p>`)}
+init();
+</script></body></html>
